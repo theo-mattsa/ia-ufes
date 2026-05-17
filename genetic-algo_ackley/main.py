@@ -21,16 +21,15 @@ def create_population(pop_size: int) -> list:
     return np.random.uniform(low=-32, high=32, size=(pop_size, 30))
 
 
-def selection(population: np.ndarray) -> np.ndarray:
+def selection(
+    population: np.ndarray, fitnesses: np.ndarray, tournament_size: int = 2
+) -> np.ndarray:
     selected = []
     for _ in range(len(population)):
-        i, j = np.random.choice(len(population), 2)
-        ind1 = population[i]
-        ind2 = population[j]
-        if fitness(ind1) < fitness(ind2):
-            selected.append(ind1)
-        else:
-            selected.append(ind2)
+        indices = np.random.choice(len(population), tournament_size, replace=False)
+        fitness_indices = fitnesses[indices]
+        best_idx = indices[np.argmin(fitness_indices)]
+        selected.append(population[best_idx])
     return np.array(selected)
 
 
@@ -64,14 +63,13 @@ def genetic_algorithm(
         best_idx = np.argmin(fitnesses)
         score = fitnesses[best_idx]
 
-        population = selection(population)
-
+        selected = selection(population, fitnesses, tournament_size=3)
         new_population = list()
 
         # Assumption: A população é par
-        for i in range(0, len(population), 2):
-            parent1 = population[i]
-            parent2 = population[i + 1]
+        for i in range(0, len(selected), 2):
+            parent1 = selected[i]
+            parent2 = selected[i + 1]
             child1, child2 = crossover(parent1, parent2, crossover_rate)
             new_population.append(mutation(child1, mutation_rate))
             new_population.append(mutation(child2, mutation_rate))
