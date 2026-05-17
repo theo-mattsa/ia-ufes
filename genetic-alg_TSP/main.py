@@ -1,121 +1,117 @@
 import math
-import numpy as np
 import random
 from constants import CLIENTS, DEPOSIT
 
 
-def fitness(x: tuple):
-
+def fitness(individual):
     distance = 0
-    path = [CLIENTS[i] for i in x]
+    path = [CLIENTS[i] for i in individual]
     path.insert(0, DEPOSIT)
     path.append(DEPOSIT)
-
     for i in range(len(path) - 1):
         distance += math.dist(path[i], path[i + 1])
-
     return distance
 
 
-def create_population(N: int) -> list:
-    NUM_CLIENTS = len(CLIENTS)
-    return [
-        np.random.choice(NUM_CLIENTS, size=NUM_CLIENTS, replace=False) for _ in range(N)
-    ]
+def create_population(pop_size):
+    n_clients = len(CLIENTS)
+    return [random.sample(range(n_clients), n_clients) for _ in range(pop_size)]
 
 
-def selection(pop: list) -> list:
-    """
-    Get the intermediate population
-    """
-
-    pop_i = list()
-    N = len(pop)
-
-    for _ in range(N):
-        ind_1 = random.choice(pop)
-        ind_2 = random.choice(pop)
-
-        fit_1 = fitness(ind_1)
-        fit_2 = fitness(ind_2)
-
-        if fit_1 < fit_2:
-            pop_i.append(ind_1)
+def selection(population):
+    selected = []
+    pop_size = len(population)
+    for _ in range(pop_size):
+        ind1 = random.choice(population)
+        ind2 = random.choice(population)
+        if fitness(ind1) < fitness(ind2):
+            selected.append(ind1)
         else:
-            pop_i.append(ind_2)
+            selected.append(ind2)
+    return selected
 
-    return pop_i
+
+def generate_child(parent1, parent2):
+    size = len(parent1)
+    start, end = sorted(random.sample(range(size), 2))
+    child = [None] * size
+    child[start:end] = parent1[start:end]
+    used = set(child[start:end])
+    p2_idx = 0
+    for i in range(size):
+        if child[i] is None:
+            while parent2[p2_idx] in used:
+                p2_idx += 1
+            child[i] = parent2[p2_idx]
+            used.add(parent2[p2_idx])
+
+    return child
 
 
-def crossover(pop_i: list, rate: float = 0.7):
-    pop_ii = []
-    N = len(pop_i)
-
-    def generate_children(p_1, p_2):
-        chrom_size = len(p_1)
-        start, end = sorted(random.sample(range(chrom_size), 2))
-        c = [None] * chrom_size
-        c[start:end] = p_1[start:end]
-        used = set(c[start:end])
-        p2_i = 0
-        for i in range(chrom_size):
-            if c[i] is None:
-                while p_2[p2_i] in used:
-                    p2_i += 1
-                c[i] = p_2[p2_i]
-                used.add(p_2[p2_i])
-                p2_i += 1
-        return c
-
-    while len(pop_ii) < N:
-        p_1 = random.choice(pop_i)
-        p_2 = random.choice(pop_i)
-        if random.random() <= rate:
-            c_1 = generate_children(p_1, p_2)
-            c_2 = generate_children(p_2, p_1)
+def crossover(population, crossover_rate=0.8):
+    children = []
+    random.shuffle(population)
+    for i in range(0, len(population), 2):
+        p1 = population[i]
+        p2 = population[i + 1]
+        if random.random() <= crossover_rate:
+            c1 = generate_child(p1, p2)
+            c2 = generate_child(p2, p1)
         else:
-            c_1 = p_1.copy()
-            c_2 = p_2.copy()
-        pop_ii.append(c_1)
-        pop_ii.append(c_2)
-
-    return pop_ii
-
-
-def mutation(pop_ii: list, rate: float = 0.1):
-    pop_iii = []
-
-    for _ in range(len(pop_ii)):
-        p_1 = random.choice(pop_ii).copy()
-        if random.random() <= rate:
-            size = len(p_1)
-            i, j = sorted(random.sample(range(size), 2))
-            p_1[i:j] = p_1[i:j][::-1]
-        pop_iii.append(p_1)
-    return pop_iii
+            c1 = p1.copy()
+            c2 = p2.copy()
+        children.append(c1)
+        children.append(c2)
+    return children
 
 
-def genetic_alg(num_epochs: int = 50):
-    N = 50
+def mutation(population, mutation_rate=0.1):
+    mutated_population = []
+    for individual in population:
+        ind = individual.copy()
+        if random.random() <= mutation_rate:
+            i, j = random.sample(range(len(ind)), 2)
+            ind[i], ind[j] = ind[j], ind[i]
+        mutated_population.append(ind)
+    return mutated_population
 
-    best_score = None
-    pop_p = create_population(N)
 
-    for i in range(num_epochs):
+def genetic_algorithm(
+    pop_size=100, generations=200, crossover_rate=0.8, mutation_rate=0.1
+):
 
-        pop_i = selection(pop_p)
-        pop_ii = crossover(pop_i)
-        pop_iii = mutation(pop_ii)
+    population = create_population(pop_size)
 
-        pop_p = pop_iii
+    best_solution = None
+    best_fitness = float("inf")
 
-        best_i = min(pop_p, key=fitness)
+    for generation in range(generations):
 
-        print(f"Best score for generation {i}: {fitness(best_i)}")
+        current_best = min(population, key=fitness)
+        current_fitness = fitness(current_best)
 
-    best = min(pop_p, key=fitness)
-    return best, fitness(best)
+        if current_fitness < best_fitness:
+            best_solution = current_best.copy()
+            best_fitness = current_fitness
+
+        selected = selection(population)
+        children = crossover(selected, crossover_rate)
+        population = mutation(children, mutation_rate)
+
+        if generation % 10 == 0:
+            print(
+                f"Generation {generation:03d} | " f"Best Distance = {best_fitness:.2f}"
+            )
+
+    return best_solution, best_fitness
 
 
 if __name__ == "__main__":
-    genetic_alg()
+
+    best_route, best_distance = genetic_algorithm()
+
+    print("\nBest Route:")
+    print(best_route)
+
+    print("\nBest Distance:")
+    print(best_distance)
