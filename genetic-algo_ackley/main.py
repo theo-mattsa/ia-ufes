@@ -1,5 +1,7 @@
 import numpy as np
 
+PENALTY = 10_000
+
 
 def ackley(x: np.ndarray) -> float:
     a = 20
@@ -14,7 +16,9 @@ def ackley(x: np.ndarray) -> float:
 
 
 def fitness(individual: np.ndarray):
-    return ackley(individual)
+    cost = ackley(individual)
+    penalty = PENALTY if np.any(individual < -32) or np.any(individual > 32) else 0
+    return cost + penalty
 
 
 def create_population(pop_size: int) -> list:
