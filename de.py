@@ -28,7 +28,7 @@ def differential_evolution(
 
     population = rng.uniform(min_bound, max_bound, size=(population_size, dimensions))
 
-    fitness = np.asarray([func(ind) for ind in population])
+    fitness = np.apply_along_axis(func, 1, population)
     best_idx = np.argmin(fitness)
     best = population[best_idx]
 

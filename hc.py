@@ -62,7 +62,7 @@ def hill_climb(*, random_current: bool = False):
         if not nbrs:
             break
         best_nbr = max(nbrs, key=fitness)
-        if fitness(best_nbr) <= fitness(current):
+        if fitness(current) >= fitness(best_nbr):
             return current
         current = best_nbr
     return current
@@ -73,7 +73,7 @@ def rr_hill_climb(n: int):
     best = None
     for _ in range(n):
         candidate = hill_climb(random_current=True)
-        if best is None or candidate > best:
+        if best is None or fitness(candidate) > fitness(best):
             best = candidate
     return best
 
